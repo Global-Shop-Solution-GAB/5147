@@ -1,0 +1,340 @@
+Program.Sub.ScreenSU.Start
+Gui.FormBomImport..Create
+Gui.FormBomImport..Caption("Bom Import")
+Gui.FormBomImport..Size(6525,1515)
+Gui.FormBomImport..MinX(0)
+Gui.FormBomImport..MinY(0)
+Gui.FormBomImport..Position(0,0)
+Gui.FormBomImport..BackColor(-2147483633)
+Gui.FormBomImport..MousePointer(0)
+Gui.FormBomImport..Event(UnLoad,Exit)
+Gui.FormBomImport.lblBomImport.Create(Label,"Select native Croe Export file to convert",True,5040,255,0,105,225,True,0,"Arial",8,-2147483633,0)
+Gui.FormBomImport.cmdFileBrowser.Create(Button)
+Gui.FormBomImport.cmdFileBrowser.Size(480,420)
+Gui.FormBomImport.cmdFileBrowser.Position(5745,450)
+Gui.FormBomImport.cmdFileBrowser.Caption("^")
+Gui.FormBomImport.cmdFileBrowser.Event(Click,cmdFileBrowser_Click)
+Gui.FormBomImport.lvw1.Create(ListView)
+Gui.FormBomImport.lvw1.Size(5550,390)
+Gui.FormBomImport.lvw1.Position(105,465)
+Gui.FormBomImport.lvw1.View(0)
+Gui.FormBomImport.lvw1.Event(OLEDragDrop,lvw1_OLEDragDrop)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+V.Global.sFile.Declare(String,"")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	
+	F.Intrinsic.Control.CallSub(Create_EmptyDataTable)
+	
+	Gui.FormBomImport..Show
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Parse_File.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	V.Local.sFile.Declare(String,"")
+	V.Local.sTemp.Declare(String,"")
+	V.Local.sTemp2.Declare(String,"")
+	V.Local.sTopParent.Declare(String,"")
+	V.Local.iSize.Declare(Long,0)
+	V.Local.i.Declare(Long,0)
+	V.Local.sData.Declare(String,"")
+	V.Local.iFcount.Declare(Long,0)
+	V.Local.sFileData.Declare(String,"")
+	
+	V.Local.sData.Redim(0,19)
+	
+	'enabling the lisview and broswer again
+	Gui.FormBomImport.lvw1.Enabled(False)
+	Gui.FormBomImport.cmdFileBrowser.Enabled(False)
+	
+	'listview allows multlipe files to be droped in
+	'spliting the argument to process each file seperately
+	F.Intrinsic.String.Split(V.Args.Files,"*!*",V.Local.sFile)
+	
+	'looping through file liist
+	F.Intrinsic.Control.For(V.Local.iFcount,0,V.Local.sFile.UBound,1)
+		F.Intrinsic.UI.InvokeWaitDialog("Building GSS CSV.......................")
+		
+		F.Intrinsic.String.Split(V.Local.sFile(iFcount),"\",V.Local.sTopParent)
+		F.Intrinsic.String.Split(V.Local.sTopParent(V.Local.sTopParent.UBound),".",V.Local.sTopParent)
+		V.Local.sTopParent.RedimPreserve(0,0)
+		
+		F.Intrinsic.File.File2String(V.Local.sFile(iFcount),V.Local.sFileData)
+		V.Global.sFile.Set(V.Local.sFileData)
+		F.Intrinsic.String.Split(V.Local.sFileData,"=============================================================================================",V.Local.sTemp)
+		F.Intrinsic.String.Split(V.Local.sTemp,"---------------------------------------------------------------------------------------------",V.Local.sTemp2)
+		
+		V.Local.sTemp.Redim(0,0)
+		V.Local.sTemp.Set(V.Local.sTemp2(1))
+		V.Local.sTemp2.Redim(0,0)
+		
+		F.Intrinsic.String.Split(V.Local.sTemp.Trim,V.Ambient.NewLine,V.Local.sTemp2)
+		
+		F.Data.DataTable.AddRow("BOMCompare","PartNo",V.Local.sTopParent,"Parent",V.Local.sTopParent,"Quantity",1,"Level","0")
+		
+		F.Intrinsic.Control.If(V.Local.sTemp2(0).Trim,=,"")	
+			F.Intrinsic.Variable.PopArray(V.Local.sTemp2,V.Local.sTemp2)
+			F.Intrinsic.Math.Sub(V.Local.sTemp2.UBound,1,V.Local.iSize)
+			V.Local.sTemp2.RedimPreserve(0,V.Local.iSize)
+			F.Intrinsic.Control.For(V.Local.i,0,V.Local.iSize,1)
+				'qty
+				F.Intrinsic.String.Left(V.Local.sTemp2(V.Local.i),7,V.Local.sData(3))
+				'part
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),25,17,V.Local.sData(0))
+				'rev
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),43,3,V.Local.sData(1))
+				'desc
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),47,30,V.Local.sData(2))
+				'catergory
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),78,2,V.Local.sData(18))
+				'source
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),80,1,V.Local.sData(6))
+				'pl
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),82,2,V.Local.sData(14))
+				'sort code
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),85,8,V.Local.sData(16))
+				'Type
+				F.Intrinsic.String.Mid(V.Local.sTemp2(V.Local.i),8,17,V.Local.sData(19))
+		
+				F.Data.DataTable.AddRow("BOMCompare","PartNo",V.Local.sData(0).Trim,"Parent",V.Local.sTopParent,"Quantity",V.Local.sData(3).Trim,"Revision",V.Local.sData(1),"Description",V.Local.sData(2),"Catergory",V.Local.sData(18),"Source",V.Local.sData(6),"ProductLine",V.Local.sData(14),"SortCode",V.Local.sData(14),"Level","1","Type",V.Local.sData(19))
+			F.Intrinsic.Control.Next(V.Local.i)
+		F.Intrinsic.Control.EndIf
+	
+		F.Intrinsic.Control.CallSub(Populate_Subassembly)
+	
+		F.Intrinsic.UI.CloseWaitDialog
+		'calling sub to save the gss formated csv 
+		F.Intrinsic.Control.CallSub(Save_CSV,"File",V.Local.sFile(V.Local.iFcount),"FileName",V.Local.sTopParent)
+	
+		F.Data.DataTable.DeleteRow("BOMCompare")
+		f.Data.DataTable.Acceptchanges("BOMCompare")
+		
+	F.Intrinsic.Control.Next(V.Local.iFcount)
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Parse_File.End
+
+Program.Sub.Exit.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+
+	F.Intrinsic.Control.End
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Exit.End
+
+Program.Sub.Create_EmptyDataTable.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+
+	F.Data.DataTable.Create("BOMCompare",True)
+	F.Data.DataTable.AddColumn("BOMCompare","PartNo","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Revision","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Description","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Quantity","String")
+	F.Data.DataTable.AddColumn("BOMCompare","UM","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Cost","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Source","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Drawing","String")
+	F.Data.DataTable.AddColumn("BOMCompare","LeadTime","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Level","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Location","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Memo1","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Memo2","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Parent","String")
+	F.Data.DataTable.AddColumn("BOMCompare","ProductLine","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Sequence","String")
+	F.Data.DataTable.AddColumn("BOMCompare","SortCode","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Tag","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Catergory","String")
+	F.Data.DataTable.AddColumn("BOMCompare","Type","String")
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Create_EmptyDataTable.End
+
+Program.Sub.Populate_SubAssembly.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	V.Local.i.Declare(Long,0)
+	V.Local.sParent.Declare(String,"")
+	V.Local.sTemp.Declare(String,"")
+	V.Local.iC.Declare(Long,0)
+	V.Local.sData.Declare(String,"")
+	V.Local.iLevel.Declare(Long,0)
+
+	F.Data.DataView.Create("BOMCompare","VBom",22,"Type = 'Sub-Assembly'","")
+	
+	F.Intrinsic.Control.For(V.Local.i,0,V.DataView.BOMCompare!VBom.RowCount--,1)
+		F.Intrinsic.String.Build("Sub-Assembly {0}",V.DataView.BOMCompare!VBom(V.Local.i).PartNo!FieldValTrim,V.Local.sTemp)
+		F.Intrinsic.String.Split(V.Global.sFile,V.Local.sTemp.Trim,V.Local.sTemp)
+		F.Intrinsic.String.Split(V.Local.sTemp(1),"=============================================================================================",V.Local.sTemp)
+		F.Intrinsic.String.Split(V.Local.sTemp,"---------------------------------------------------------------------------------------------",V.Local.sTemp)
+		F.Intrinsic.String.Split(V.Local.sTemp(1),V.Ambient.NewLine,V.Local.sTemp)
+		F.Intrinsic.Control.For(V.Local.iC,0,V.Local.sTemp.UBound,1)
+			V.Local.sData.Redim(0,19)
+			F.Intrinsic.Control.If(V.Local.sTemp(V.Local.iC).Trim,<>,"")
+				'qty
+				F.Intrinsic.String.Left(V.Local.sTemp(V.Local.iC),7,V.Local.sData(3))
+				'part
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),25,17,V.Local.sData(0))
+				'rev
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),43,3,V.Local.sData(1))
+				'desc
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),47,30,V.Local.sData(2))
+				'catergory
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),78,2,V.Local.sData(18))
+				'source
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),80,1,V.Local.sData(6))
+				'pl
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),82,2,V.Local.sData(14))
+				'sort code
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),85,8,V.Local.sData(16))
+				'Type
+				F.Intrinsic.String.Mid(V.Local.sTemp(V.Local.iC),8,17,V.Local.sData(19))
+				F.Intrinsic.Control.If(V.DataView.BOMCompare!VBom(V.Local.i).PartNo!FieldValTrim,<>,V.Local.sData(0).Trim)
+					F.Intrinsic.Math.Add(V.DataView.BOMCompare!VBom(V.Local.i).Level!FieldValLong,1,V.Local.iLevel)
+					F.Intrinsic.String.RPad(V.DataView.BOMCompare!VBom(V.Local.i).PartNo!FieldVal," ",17,V.Local.sParent)
+					F.Intrinsic.String.Build("{0}{1}",V.Local.sParent,V.DataView.BOMCompare!VBom(V.Local.i).Revision!FieldVal,V.Local.sParent)
+					F.Data.DataTable.AddRow("BOMCompare","PartNo",V.Local.sData(0).Trim,"Parent",V.Local.sParent,"Quantity",V.Local.sData(3).Trim,"Revision",V.Local.sData(1),"Description",V.Local.sData(2),"Catergory",V.Local.sData(18),"Source",V.Local.sData(6),"ProductLine",V.Local.sData(14),"SortCode",V.Local.sData(14),"Level",V.Local.iLevel,"Type",V.Local.sData(19))
+				F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.Next(V.Local.iC)
+	F.Intrinsic.Control.Next(V.Local.i)
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Populate_SubAssembly.End
+
+Program.Sub.lvw1_OLEDragDrop.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	
+	'passing file location when user drops file in list view
+	F.Intrinsic.Control.CallSub(Parse_File,"Files",V.Args.Files)
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.lvw1_OLEDragDrop.End
+
+Program.Sub.Save_CSV.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	V.Local.sFileLocation.Declare(String,"")
+	V.Local.sRet.Declare(String,"")
+	V.Local.iRet.Declare(Long,0)
+	V.Local.sFile.Declare(String,"")
+	
+	'allowing user to select location to save the file
+	F.Intrinsic.UI.FolderBrowser("Select Folder",V.Local.sRet)
+	
+	'saving the file
+	F.Intrinsic.Control.If(V.Local.sRet.Length,>,0)
+		F.Intrinsic.String.Build("{0}\{1}.csv",V.Local.sRet,V.Args.FileName,V.Local.sFileLocation)
+		F.Data.DataTable.SaveToCSV("BOMCompare",V.Local.sFileLocation,True)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("To save a File You'll need to Select a Folder.  Do you want to Select a folder to save the file?","Attention",4,V.Local.iRet)
+		F.Intrinsic.Control.If(V.Local.iRet,=,6)
+			'recalling sub if user does want to save the csv
+			F.Intrinsic.Control.CallSub(Save_CSV,"File",V.Args.File,"FileName",V.Args.FileName)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+	
+	'letting user know the location they selected
+	F.Intrinsic.String.Build("File Saved Location: {0}",V.Local.sRet,V.Local.sRet)
+	F.Intrinsic.UI.Msgbox(V.Local.sRet)
+	
+	'enabling the lisview and broswer again
+	Gui.FormBomImport.lvw1.Enabled(True)
+	Gui.FormBomImport.cmdFileBrowser.Enabled(True)
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.Save_CSV.End
+
+Program.Sub.cmdFileBrowser_Click.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String,"")
+	V.Local.sRet.Declare(String,"")
+	
+	'when selecting from the browser only show csv files
+	F.Intrinsic.UI.ShowOpenFileDialog("","","",V.Local.sRet)
+	'checking to see if a file was chosen
+	F.Intrinsic.Control.If(V.Local.sRet.Length,>,0)
+		'passing file location when user drops file in list view
+		F.Intrinsic.Control.CallSub(Parse_File,"Files",V.Local.sRet)
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","GCG_5147_Creo_Import.g2u",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.CallSub(Exit)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+Program.Sub.cmdFileBrowser_Click.End
+
+
+
+
